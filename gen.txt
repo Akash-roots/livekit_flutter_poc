@@ -1,0 +1,9 @@
+F:\>lk token create --api-key devkey --api-secret d2f38f98c0ba4b0199e8b9bbf7321e02abcf9f9b8318e5f2bb89e9df01d73e9a --identity user1 --room test-room --join --valid-for 24h
+valid for (mins):  1440
+Token grants:
+{
+  "roomJoin": true,
+  "room": "test-room"
+}
+
+Access token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDk4MjQ2MzYsImlzcyI6ImRldmtleSIsIm5hbWUiOiJ1c2VyMSIsIm5iZiI6MTc0OTczODIzNiwic3ViIjoidXNlcjEiLCJ2aWRlbyI6eyJyb29tIjoidGVzdC1yb29tIiwicm9vbUpvaW4iOnRydWV9fQ.9Qivc-OwguZ0XzlTWqGOHeF1GM7PQMdnSeXqeh03-pw
