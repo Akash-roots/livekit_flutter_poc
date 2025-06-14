@@ -35,6 +35,9 @@ dependencies:
   flutter_webrtc: ^0.14.1
   http: ^1.2.0
   permission_handler: ^11.0.0 # <--- ADD THIS LINE
+  # screen_share_plugin:
+  #   path: ../screen_share_plugin
+
 
 
 

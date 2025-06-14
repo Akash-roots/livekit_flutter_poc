@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
-const String serverUrl = 'http://192.168.1.22:3000';
-const String livekitUrl = 'ws://192.168.1.22:7880';
+// import 'package:screen_share_plugin/screen_share_plugin.dart';
+
+const String serverUrl = 'http://192.168.1.23:3000';
+const String livekitUrl = 'ws://192.168.1.23:7880';
 
 class WaitingRoomPage extends StatefulWidget {
   final String roomId;
@@ -28,6 +32,8 @@ class WaitingRoomPage extends StatefulWidget {
 class _WaitingRoomPageState extends State<WaitingRoomPage> {
   Room? _room;
   List<String> _participantNames = [];
+  LocalVideoTrack? _screenShareTrack;
+  LocalTrackPublication? _screenSharePublication;
 
   LocalVideoTrack? _localVideoTrack;
   LocalAudioTrack? _localAudioTrack; // Add to your state
@@ -139,6 +145,33 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
     print('Current participants: $_participantNames');
   }
 
+  Future<void> _startScreenShare() async {
+    try {
+      final screenTrack = await LocalVideoTrack.createScreenShareTrack();
+
+      if (screenTrack != null) {
+        final pub = await _room?.localParticipant?.publishVideoTrack(
+          screenTrack,
+        );
+        setState(() {
+          _screenShareTrack = screenTrack;
+          _screenSharePublication = pub;
+        });
+      }
+    } catch (e) {
+      print('Failed to start screen share: $e');
+    }
+  }
+
+  Future<void> _stopScreenShare() async {
+    if (_screenShareTrack != null) {
+      await _screenShareTrack!.stop(); // this unpublishes as well
+      setState(() {
+        _screenShareTrack = null;
+      });
+    }
+  }
+
   void _sendStartCall() {
     _room?.localParticipant?.publishData(
       utf8.encode('start_call'),
@@ -191,7 +224,8 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
                 onPressed: _sendStartCall,
               ),
             SizedBox(height: 10),
-            // NEW: Add Expanded + ListView for videos
+
+            // Video display area
             Expanded(
               child: ListView(
                 children: [
@@ -217,6 +251,37 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
                 ],
               ),
             ),
+
+            // // Screen sharing buttons (visible only after call starts)
+            // if (_callStarted)
+            //   Row(
+            //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            //     children: [
+            //       ElevatedButton(
+            //         onPressed: () async {
+            //           await ScreenSharePlugin.startScreenShare();
+            //         },
+            //         child: Text("Start Screen Share"),
+            //       ),
+            //       ElevatedButton(
+            //         onPressed: () async {
+            //           await ScreenSharePlugin.stopScreenShare();
+            //         },
+            //         child: Text("Stop Screen Share"),
+            //       ),
+            //     ],
+            //   ),
+            if (_callStarted && kIsWeb)
+              ElevatedButton(
+                onPressed: _startScreenShare,
+                child: Text('Start Screen Share'),
+              ),
+            if (_screenShareTrack != null)
+              ElevatedButton(
+                onPressed: _stopScreenShare,
+                child: Text('Stop Screen Share'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              ),
           ],
         ),
       ),

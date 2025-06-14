@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'waiting_room_page.dart';
 
 const String serverUrl =
-    'http://192.168.1.22:3000'; // replace with your server URL
+    'http://192.168.1.23:3000'; // replace with your server URL
 
 class CreateRoomPage extends StatefulWidget {
   @override
