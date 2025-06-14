@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-const String serverUrl = 'http://10.10.1.23:3000';
-const String livekitUrl = 'ws://10.10.1.13:7880';
+const String serverUrl = 'http://192.168.1.22:3000';
+const String livekitUrl = 'ws://192.168.1.22:7880';
 
 class WaitingRoomPage extends StatefulWidget {
   final String roomId;
@@ -29,8 +29,11 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
   Room? _room;
   List<String> _participantNames = [];
 
-  LocalVideoTrack? _localVideoTrack; // NEW
-  bool _callStarted = false; // NEW
+  LocalVideoTrack? _localVideoTrack;
+  LocalAudioTrack? _localAudioTrack; // Add to your state
+  bool _callStarted = false;
+
+  final Map<String, VideoTrack> _remoteVideoTracks = {}; // NEW
 
   @override
   void initState() {
@@ -72,6 +75,17 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
     print('Connected to LiveKit room: ${room.name}');
 
     _updateParticipantList(room);
+    for (var remoteParticipant in room.remoteParticipants.values) {
+      for (var pub in remoteParticipant.videoTrackPublications) {
+        if (pub.subscribed && pub.track != null && pub.track is VideoTrack) {
+          print(
+            'Adding existing remote video track: ${remoteParticipant.identity}',
+          );
+          _remoteVideoTracks[remoteParticipant.identity] =
+              pub.track as VideoTrack;
+        }
+      }
+    }
 
     setState(() {
       _room = room;
@@ -88,6 +102,19 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
       if (msg == 'start_call' && !_callStarted) {
         _startPublishing();
       }
+    } else if (event is TrackSubscribedEvent) {
+      if (event.track is VideoTrack) {
+        print('Remote video track subscribed: ${event.participant.identity}');
+        setState(() {
+          _remoteVideoTracks[event.participant.identity] =
+              event.track as VideoTrack;
+        });
+      }
+    } else if (event is ParticipantDisconnectedEvent) {
+      print('Participant disconnected: ${event.participant.identity}');
+      setState(() {
+        _remoteVideoTracks.remove(event.participant.identity);
+      });
     }
   }
 
@@ -100,6 +127,7 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
     }
 
     // Add remote participants:
+    // Add remote participants:
     room.remoteParticipants.values.forEach((p) {
       names.add(p.identity);
     });
@@ -111,7 +139,6 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
     print('Current participants: $_participantNames');
   }
 
-  // NEW → Host sends "start_call" + starts own video
   void _sendStartCall() {
     _room?.localParticipant?.publishData(
       utf8.encode('start_call'),
@@ -121,14 +148,16 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
     _startPublishing();
   }
 
-  // NEW → Publish local video track
   Future<void> _startPublishing() async {
     final localVideoTrack = await LocalVideoTrack.createCameraTrack();
+    final localAudioTrack = await LocalAudioTrack.create();
 
     await _room?.localParticipant?.publishVideoTrack(localVideoTrack);
+    await _room?.localParticipant?.publishAudioTrack(localAudioTrack);
 
     setState(() {
       _localVideoTrack = localVideoTrack;
+      _localAudioTrack = localAudioTrack;
       _callStarted = true;
     });
   }
@@ -136,7 +165,8 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
   @override
   void dispose() {
     _room?.dispose();
-    _localVideoTrack?.dispose(); // cleanup local video track
+    _localVideoTrack?.dispose();
+    _localAudioTrack?.dispose();
     super.dispose();
   }
 
@@ -160,15 +190,33 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
                 child: Text('Start Call'),
                 onPressed: _sendStartCall,
               ),
-            if (_localVideoTrack != null)
-              Container(
-                margin: const EdgeInsets.all(8),
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.blueAccent),
-                ),
-                child: VideoTrackRenderer(_localVideoTrack!),
+            SizedBox(height: 10),
+            // NEW: Add Expanded + ListView for videos
+            Expanded(
+              child: ListView(
+                children: [
+                  if (_localVideoTrack != null)
+                    Container(
+                      margin: const EdgeInsets.all(8),
+                      height: 200,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.blueAccent),
+                      ),
+                      child: VideoTrackRenderer(_localVideoTrack!),
+                    ),
+                  ..._remoteVideoTracks.entries.map(
+                    (entry) => Container(
+                      margin: const EdgeInsets.all(8),
+                      height: 200,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.greenAccent),
+                      ),
+                      child: VideoTrackRenderer(entry.value),
+                    ),
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ),

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'create_room_page.dart'; // <--- import this
-import 'join_meeting_page.dart';  // <--- import at top
-
+import 'join_meeting_page.dart'; // <--- import at top
 
 const String serverUrl =
-    'http://10.10.1.23:3000'; // replace with your server URL
+    'http://192.168.1.22:3000'; // replace with your server URL
 
 void main() {
   runApp(MyApp());
