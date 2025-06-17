@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'create_room_page.dart'; // <--- import this
 import 'join_meeting_page.dart'; // <--- import at top
+import 'teacher_list_page.dart';
 
 const String serverUrl =
     'http://192.168.1.23:3000'; // replace with your server URL
@@ -15,7 +16,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'LiveKit Teams Flow',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: LandingPage(),
+      home: TeacherListPage(),
     );
   }
 }
