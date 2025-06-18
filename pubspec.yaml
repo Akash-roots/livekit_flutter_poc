@@ -35,6 +35,10 @@ dependencies:
   flutter_webrtc: ^0.14.1
   http: ^1.2.0
   permission_handler: ^11.0.0 # <--- ADD THIS LINE
+  shared_preferences: ^2.2.2
+  image_picker: ^1.1.1
+  flutter_dotenv: ^5.1.0
+  web_socket_channel: ^2.4.0
   # screen_share_plugin:
   #   path: ../screen_share_plugin
 
@@ -67,6 +71,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/.env
+
+  
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
-import 'create_room_page.dart'; // <--- import this
-import 'join_meeting_page.dart'; // <--- import at top
-import 'teacher_list_page.dart';
+import 'screens/create_room_page.dart';
+import 'screens/join_meeting_page.dart';
+import 'screens/login_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 const String serverUrl =
     'http://192.168.1.23:3000'; // replace with your server URL
 
-void main() {
+void main() async {
+  await dotenv.load(fileName: ".env"); // Ensure this is awaited
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'LiveKit Teams Flow',
+      title: 'Roots Edtech',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: TeacherListPage(),
+      home: LoginScreen(),
     );
   }
 }
