@@ -6,6 +6,7 @@ import 'teacher_list_page.dart'; // Make sure this import is correct and the fil
 import 'register_screen.dart';
 import 'home_screen.dart'; // Make sure this import is correct and the file exists
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'teacher_home.dart';
 
 class LoginScreen extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -41,31 +42,46 @@ class LoginScreen extends StatelessWidget {
         final List<String> roles = List<String>.from(
           jsonResponse['role'] ?? [],
         );
-        final String? userId = jsonResponse['user_id'];
+        final int? userId = jsonResponse['user_id'];
 
         if (token != null && token.isNotEmpty) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('auth_token', token);
           if (userId != null) {
-            await prefs.setString('userId', userId);
+            await prefs.setString('userId', userId.toString());
           }
           print("Auth token saved: $token");
           print("roles saved: $roles");
 
           // Navigate based on role
           if (roles.contains('student')) {
-            print("Navigating to TeacherListPage as teacher role detected.");
+            print("Navigating to TeacherListPage for student.");
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const TeacherListPage()),
             );
-          } else {
-            print("Navigating to HomeScreen for non-teacher role.");
+          } else if (roles.contains('teacher')) {
+            print("Navigating to TeacherDashboard for teacher.");
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TeacherHome(),
+              ), // or TeacherHome
+            );
+          } /*else if (roles.contains('admin')) {
+            print("Navigating to AdminDashboard.");
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const AdminHomePage()),
+            );
+          }*/ else {
+            print("Unknown role. Navigating to generic HomeScreen.");
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const HomeScreen()),
             );
           }
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Login successful!"),

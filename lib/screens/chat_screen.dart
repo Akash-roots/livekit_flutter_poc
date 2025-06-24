@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatScreen extends StatefulWidget {
   final Map<String, dynamic> teacher;
-  final String studentId; // Required for WebSocket identity
+  final String? studentId;
 
   const ChatScreen({super.key, required this.teacher, required this.studentId});
 
@@ -19,14 +21,56 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, dynamic>> _messages = [];
   final TextEditingController _controller = TextEditingController();
   final serverUrl = dotenv.env['SERVER_URL'];
+  final wsUrl = dotenv.env['WS_URL'];
+  String? roomId;
+  String? token;
 
   @override
   void initState() {
     super.initState();
-    final uri = Uri.parse('ws://$serverUrl');
+    _getRoomId();
+  }
 
-    // Replace with your actual WebSocket auth logic
-    _channel = WebSocketChannel.connect(uri);
+  Future<void> _getRoomId() async {
+    final prefs = await SharedPreferences.getInstance();
+    token = prefs.getString('auth_token');
+
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Authentication error. Please log in again.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$serverUrl/room/chat-room'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'user2Id': widget.teacher['user_id']}),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        setState(() {
+          roomId = json['roomId'];
+        });
+        _connectWebSocket();
+      } else {
+        print("Failed to get room: ${response.body}");
+      }
+    } catch (e) {
+      print("Room ID error: $e");
+    }
+  }
+
+  void _connectWebSocket() {
+    final wsUrl = 'ws://192.168.1.30:3000/?token=$token';
+    _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
     _channel.stream.listen((data) {
       final decoded = jsonDecode(data);
@@ -38,9 +82,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _sendMessage() {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || roomId == null) return;
 
-    final message = {'toUserId': widget.teacher['user_id'], 'text': text};
+    final message = {
+      'toUserId': widget.teacher['user_id'],
+      'text': text,
+      'roomId': roomId,
+    };
 
     _channel.sink.add(jsonEncode(message));
 

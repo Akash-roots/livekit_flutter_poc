@@ -244,11 +244,8 @@ class TeacherCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ChatScreen(
-                teacher: teacher,
-                studentId:
-                    'CURRENT_STUDENT_ID', // Replace with real user ID from token or session
-              ),
+              builder: (_) =>
+                  ChatScreen(teacher: teacher, studentId: studentId),
             ),
           );
 
