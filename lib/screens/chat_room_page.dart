@@ -3,15 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 
 class ChatRoomPage extends StatefulWidget {
-  final String roomId;
-  final String studentName;
+  final String? roomId;
+  final String? studentName;
+  final int? studentId;
 
   const ChatRoomPage({
     super.key,
     required this.roomId,
     required this.studentName,
+    required this.studentId,
   });
 
   @override
@@ -28,16 +31,50 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   @override
   void initState() {
     super.initState();
-    connectWebSocket();
+    fetchPreviousMessages().then((_) => connectWebSocket());
+  }
+
+  Future<void> fetchPreviousMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final baseUrl = dotenv.env['SERVER_URL'];
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/messages/history/${widget.roomId}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          _messages.addAll(
+            data.map(
+              (msg) => {"senderId": msg["sender_id"], "text": msg["message"]},
+            ),
+          );
+        });
+      } else {
+        print("Failed to load chat history: ${response.body}");
+      }
+    } catch (e) {
+      print("Error fetching chat history: $e");
+    }
   }
 
   Future<void> connectWebSocket() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    userId = prefs.getString('user_id');
+    userId = prefs.getString('userId');
+    if (userId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('User ID not found.')));
+      return;
+    }
 
-    final wsUrl = dotenv.env['WS_URL']; // Example: ws://localhost:3000
-    _channel = WebSocketChannel.connect(Uri.parse('$wsUrl?token=$token'));
+    final wsUrl = 'ws://192.168.1.30:3000/?token=$token';
+    _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
     _channel.stream.listen((data) {
       final message = json.decode(data);
@@ -51,7 +88,12 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    final msg = {"roomId": widget.roomId, "text": text, "senderId": userId};
+    final msg = {
+      "roomId": widget.roomId,
+      "text": text,
+      "fromUserId": userId,
+      "toUserId": widget.studentId,
+    };
 
     _channel.sink.add(jsonEncode(msg));
     setState(() {

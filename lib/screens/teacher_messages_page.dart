@@ -24,6 +24,7 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
   }
 
   Future<void> fetchConversations() async {
+    print('Fetching conversations...');
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
     final userId = prefs.getString('userId');
@@ -38,6 +39,7 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
       if (res.statusCode == 200) {
         setState(() {
           _conversations = json.decode(res.body);
+          print('Conversations fetched: ${_conversations}');
           _loading = false;
         });
       } else {
@@ -70,6 +72,8 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
       itemCount: _conversations.length,
       itemBuilder: (context, index) {
         final convo = _conversations[index];
+        final student = convo['sender']; // assuming teacher is the receiver
+
         return ListTile(
           title: Text(convo['student_name'] ?? 'Student'),
           subtitle: Text(convo['last_message'] ?? ''),
@@ -79,7 +83,8 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
               MaterialPageRoute(
                 builder: (_) => ChatRoomPage(
                   roomId: convo['room_id'],
-                  studentName: convo['student_name'],
+                  studentName: student?['full_name'] ?? 'Student',
+                  studentId: student?['id'] ?? '',
                 ),
               ),
             );

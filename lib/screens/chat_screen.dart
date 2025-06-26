@@ -21,7 +21,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, dynamic>> _messages = [];
   final TextEditingController _controller = TextEditingController();
   final serverUrl = dotenv.env['SERVER_URL'];
-  final wsUrl = dotenv.env['WS_URL'];
+  final wsBaseUrl = dotenv.env['WS_URL'];
   String? roomId;
   String? token;
 
@@ -56,15 +56,44 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        setState(() {
-          roomId = json['roomId'];
-        });
-        _connectWebSocket();
+        roomId = json['roomId'];
+
+        await _loadChatHistory(); // Step 1: Load history
+        _connectWebSocket(); // Step 2: WebSocket
       } else {
         print("Failed to get room: ${response.body}");
       }
     } catch (e) {
       print("Room ID error: $e");
+    }
+  }
+
+  Future<void> _loadChatHistory() async {
+    if (roomId == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$serverUrl/messages/history/$roomId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          _messages.addAll(
+            data.map(
+              (msg) => {
+                'from': msg['sender_id'].toString(),
+                'text': msg['message'],
+              },
+            ),
+          );
+        });
+      } else {
+        print('Failed to load chat history: ${response.body}');
+      }
+    } catch (e) {
+      print('Chat history error: $e');
     }
   }
 
@@ -88,6 +117,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'toUserId': widget.teacher['user_id'],
       'text': text,
       'roomId': roomId,
+      'fromUserId': widget.studentId,
     };
 
     _channel.sink.add(jsonEncode(message));
@@ -101,6 +131,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _channel.sink.close(status.goingAway);
+    _controller.dispose();
     super.dispose();
   }
 
@@ -126,7 +157,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     decoration: BoxDecoration(
-                      color: isMe ? Colors.blue[100] : Colors.grey[200],
+                      color: isMe ? Colors.blue[100] : Colors.grey[300],
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(

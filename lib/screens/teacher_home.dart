@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'teacher_messages_page.dart';
+import 'teacher_classes_page.dart';
 
 class TeacherHome extends StatefulWidget {
   const TeacherHome({super.key});
@@ -14,6 +15,7 @@ class _TeacherHomeState extends State<TeacherHome> {
   static const List<Widget> _pages = [
     Center(child: Text('Dashboard (Coming Soon)')),
     TeacherMessagesPage(),
+    TeacherClassesPage(),
     Center(child: Text('Settings (Coming Soon)')),
   ];
 
@@ -26,6 +28,7 @@ class _TeacherHomeState extends State<TeacherHome> {
   final drawerItems = const [
     BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
     BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Messages'),
+    BottomNavigationBarItem(icon: Icon(Icons.class_), label: 'Classes'),
     BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
   ];
 

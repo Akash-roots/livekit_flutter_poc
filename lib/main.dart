@@ -18,7 +18,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Roots Edtech',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: Colors.white,
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          selectedItemColor: Colors.blueAccent,
+          unselectedItemColor: Colors.grey,
+          backgroundColor: Colors.white,
+          elevation: 10,
+        ),
+        textTheme: const TextTheme(bodyMedium: TextStyle(color: Colors.black)),
+      ),
       home: LoginScreen(),
     );
   }
