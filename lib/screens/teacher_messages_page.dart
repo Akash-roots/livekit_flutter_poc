@@ -16,6 +16,7 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
   List<dynamic> _conversations = [];
   bool _loading = true;
   String? _error;
+  int? _userId;
 
   @override
   void initState() {
@@ -27,7 +28,7 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
     print('Fetching conversations...');
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    final userId = prefs.getString('userId');
+    _userId = int.tryParse(prefs.getString('userId') ?? '') ?? 0;
     final baseUrl = dotenv.env['SERVER_URL'];
 
     try {
@@ -72,7 +73,16 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
       itemCount: _conversations.length,
       itemBuilder: (context, index) {
         final convo = _conversations[index];
-        final student = convo['sender']; // assuming teacher is the receiver
+
+        final senderId = convo['sender']['id'];
+        final receiverId = convo['receiver']['id'];
+        final currentUserId = _userId ?? 0;
+        final isCurrentUserSender = senderId == currentUserId;
+
+        final studentId = isCurrentUserSender ? receiverId : senderId;
+        final studentName = isCurrentUserSender
+            ? convo['receiver']['full_name']
+            : convo['sender']['full_name'];
 
         return ListTile(
           title: Text(convo['student_name'] ?? 'Student'),
@@ -83,8 +93,8 @@ class _TeacherMessagesPageState extends State<TeacherMessagesPage> {
               MaterialPageRoute(
                 builder: (_) => ChatRoomPage(
                   roomId: convo['room_id'],
-                  studentName: student?['full_name'] ?? 'Student',
-                  studentId: student?['id'] ?? '',
+                  studentName: studentName ?? 'Student',
+                  studentId: studentId ?? 0,
                 ),
               ),
             );

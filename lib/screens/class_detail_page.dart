@@ -25,7 +25,8 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
   Future<void> _fetchStudents() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    final url = '${dotenv.env['SERVER_URL']}/class/${widget.classId}/students';
+    final url =
+        '${dotenv.env['SERVER_URL']}/classes/${widget.classId}/students';
 
     final res = await http.get(
       Uri.parse(url),
@@ -47,7 +48,8 @@ class _ClassDetailPageState extends State<ClassDetailPage> {
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    final url = '${dotenv.env['SERVER_URL']}/class/${widget.classId}/students';
+    final url =
+        '${dotenv.env['SERVER_URL']}/classes/${widget.classId}/students';
 
     final res = await http.post(
       Uri.parse(url),

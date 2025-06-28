@@ -24,6 +24,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final wsBaseUrl = dotenv.env['WS_URL'];
   String? roomId;
   String? token;
+  String? userId;
+  final Map<String, List<Map<String, dynamic>>> _groupedMessages = {};
 
   @override
   void initState() {
@@ -59,6 +61,7 @@ class _ChatScreenState extends State<ChatScreen> {
         roomId = json['roomId'];
 
         await _loadChatHistory(); // Step 1: Load history
+        _groupMessages(); // <-- ADD THIS LINE
         _connectWebSocket(); // Step 2: WebSocket
       } else {
         print("Failed to get room: ${response.body}");
@@ -85,6 +88,7 @@ class _ChatScreenState extends State<ChatScreen> {
               (msg) => {
                 'from': msg['sender_id'].toString(),
                 'text': msg['message'],
+                'created_at': msg['created_at'],
               },
             ),
           );
@@ -98,13 +102,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _connectWebSocket() {
-    final wsUrl = 'ws://192.168.1.30:3000/?token=$token';
+    final wsUrl = '$wsBaseUrl?token=$token';
     _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
     _channel.stream.listen((data) {
       final decoded = jsonDecode(data);
       setState(() {
         _messages.add(decoded);
+        _groupMessages();
       });
     });
   }
@@ -123,9 +128,42 @@ class _ChatScreenState extends State<ChatScreen> {
     _channel.sink.add(jsonEncode(message));
 
     setState(() {
-      _messages.add({'from': widget.studentId, 'text': text});
+      _messages.add({
+        'from': widget.studentId,
+        'text': text,
+        'created_at': DateTime.now().toIso8601String(),
+      });
       _controller.clear();
+      _groupMessages();
     });
+  }
+
+  void _groupMessages() {
+    _groupedMessages.clear();
+    print(_messages);
+    for (final msg in _messages) {
+      final dt = DateTime.tryParse(msg['created_at'] ?? '')?.toLocal();
+      if (dt == null) continue;
+      final dateLabel = _getDateLabel(dt);
+      _groupedMessages.putIfAbsent(dateLabel, () => []).add(msg);
+    }
+  }
+
+  String _getDateLabel(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDay = DateTime(dt.year, dt.month, dt.day);
+
+    if (messageDay == today) return 'Today';
+    if (messageDay == today.subtract(const Duration(days: 1)))
+      return 'Yesterday';
+    return '${messageDay.day}/${messageDay.month}/${messageDay.year}';
+  }
+
+  String _formatTime(String raw) {
+    final dt = DateTime.tryParse(raw)?.toLocal();
+    if (dt == null) return '';
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -142,31 +180,61 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
+            child: ListView(
               padding: const EdgeInsets.all(12),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                final isMe = msg['from'] == widget.studentId;
-
-                return Align(
-                  alignment: isMe
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isMe ? Colors.blue[100] : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      msg['text'] ?? '',
-                      style: const TextStyle(fontSize: 16),
+              children: _groupedMessages.entries.expand((entry) {
+                return [
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(entry.key),
                     ),
                   ),
-                );
-              },
+                  ...entry.value.map((msg) {
+                    final isMe = msg['from'] == widget.studentId;
+                    return Align(
+                      alignment: isMe
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isMe ? Colors.blue[100] : Colors.grey[300],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: isMe
+                              ? CrossAxisAlignment.end
+                              : CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              msg['text'] ?? '',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatTime(msg['created_at']),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ];
+              }).toList(),
             ),
           ),
           const Divider(height: 1),

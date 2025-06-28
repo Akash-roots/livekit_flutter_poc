@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'teacher_list_page.dart'; // Make sure this import is correct and the file exists
 import 'register_screen.dart';
 import 'home_screen.dart'; // Make sure this import is correct and the file exists
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'teacher_home.dart';
+import 'student_home.dart';
 
 class LoginScreen extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -58,7 +58,7 @@ class LoginScreen extends StatelessWidget {
             print("Navigating to TeacherListPage for student.");
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const TeacherListPage()),
+              MaterialPageRoute(builder: (context) => const StudentHome()),
             );
           } else if (roles.contains('teacher')) {
             print("Navigating to TeacherDashboard for teacher.");
